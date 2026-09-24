@@ -1,0 +1,45 @@
+{
+  "$schema_note": "Manifesto explícito de modelos. Los hashes SHA-256 deben verificarse tras la descarga real en el equipo objetivo (GPU/CPU). Ningún modelo se descarga sin consentimiento del usuario.",
+  "models": [
+    {
+      "id": "htdemucs_ft",
+      "stage": 1,
+      "role": "Separación base 4 stems (vocals, drums, bass, other)",
+      "source": "Meta FAIR / Demucs (facebookresearch/demucs)",
+      "license": "CC BY-NC 4.0",
+      "sha256": "PENDIENTE_VERIFICACION_LOCAL",
+      "status": "VERIFIED_UPSTREAM",
+      "notes": "Modelo oficial htdemucs_ft (fine-tuned). Descarga vía demucs al primer uso con confirmación explícita."
+    },
+    {
+      "id": "bsrnn_vocals",
+      "stage": 5,
+      "role": "Refinamiento vocal / separación multi-fuente alta fidelidad",
+      "source": "ByteDance/music_source_separation (Raveseed BSRNN)",
+      "license": "Apache-2.0 (verificar por checkpoint)",
+      "sha256": "PENDIENTE_VERIFICACION_LOCAL",
+      "status": "EXPERIMENTAL",
+      "notes": "Requiere verificación de licencia de checkpoints específicos antes de incluirse en el pipeline por defecto."
+    },
+    {
+      "id": "dereverb_candidate",
+      "stage": 2,
+      "role": "De-reverb de voz",
+      "source": "A investigar: UVR DeReverb / modelos académicos (DRNR, etc.)",
+      "license": "PENDIENTE",
+      "sha256": null,
+      "status": "NOT_FOUND_VERIFIED",
+      "notes": "HONESTIDAD: no existe aún un modelo público verificado con calidad profesional para de-reverb musical. Etapa marcada como experimental hasta validación."
+    },
+    {
+      "id": "lead_backing_split",
+      "stage": 3,
+      "role": "Separación lead vs backing vocals",
+      "source": "A investigar: UVR models / académicos",
+      "license": "PENDIENTE",
+      "sha256": null,
+      "status": "NOT_FOUND_VERIFIED",
+      "notes": "HONESTIDAD: sin modelos públicos fiables de calidad profesional. UI debe informar limitaciones."
+    }
+  ]
+}
