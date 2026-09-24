@@ -1,0 +1,1072 @@
+Actúa como arquitecto de software, desarrollador senior full-stack Python/React,
+especialista en audio digital, machine learning aplicado a separación musical,
+diseño de producto y seguridad.
+
+Quiero que diseñes, programes, pruebes y documentes desde cero una aplicación web
+local llamada Limbus Split Pro - Local Web Edition.
+
+Trabaja de forma autónoma hasta obtener una aplicación funcional y verificable.
+No te limites a describir código: inspecciona el entorno, investiga, implementa,
+ejecuta pruebas reales y genera los artefactos finales.
+
+Si encuentras una imposibilidad técnica o legal, no la ocultes ni simules que una
+función existe. Continúa con todo lo que sí pueda completarse y explica exactamente
+qué modelo, licencia o recurso falta.
+
+────────────────────────────────────────────────────────────────────────────────
+1. OBJETIVO GENERAL
+────────────────────────────────────────────────────────────────────────────────
+
+Limbus Split Pro - Local Web Edition será una aplicación web que se ejecuta
+íntegramente en el PC local del usuario (servidor en localhost, cliente en el
+navegador) para separar una mezcla musical en pistas independientes mediante
+modelos locales de inteligencia artificial.
+
+Está dirigida a uso propio e interno. No es un producto comercial, no se
+distribuirá a terceros y no requiere firma de código, instalador MSI ni
+certificados. Sin embargo, debe mantener estándares profesionales de calidad,
+estabilidad y organización del código.
+
+El flujo principal será: cargar una canción, elegir qué separar, procesar,
+escuchar las pistas en un mezclador multipista y exportar.
+
+Prioridades, en este orden:
+  1. Calidad real de separación.
+  2. Sincronización exacta de reproducción y exportación.
+  3. Estabilidad y ausencia de archivos silenciosos falsos.
+  4. Facilidad de uso.
+  5. Privacidad y procesamiento 100% local.
+  6. Pipeline de separación maximizado (múltiples etapas en cascada).
+  7. Diseño limpio, funcional y agradable.
+  8. Licencias y atribuciones correctas.
+  9. Reproducibilidad del entorno.
+
+No construyas una aplicación de escritorio nativa, una PWA ni una aplicación
+Electron. Construye una aplicación web con servidor Python local y frontend
+React que se comunica exclusivamente mediante localhost.
+
+────────────────────────────────────────────────────────────────────────────────
+2. STACK TECNOLÓGICO
+────────────────────────────────────────────────────────────────────────────────
+
+Backend:
+  - Python 3.11+ (versión exacta fijada y documentada).
+  - FastAPI como framework web asíncrono.
+  - Uvicorn como servidor ASGI.
+  - PyTorch como runtime de inferencia.
+  - Demucs v4 (htdemucs_ft) como motor principal de separación 4-stem.
+  - BSRNN (music_source_separation de ByteDance) para sub-stems de batería.
+  - Modelos de de-reverb vocal (investigar y documentar opciones).
+  - Modelos experimentales para lead/backing vocals (investigar y documentar).
+  - FFmpeg (binario local, no dependiente del PATH del sistema) para
+    decodificación de MP3, FLAC, AAC, M4A.
+  - soundfile / librosa para lectura/escritura de audio.
+  - numpy para operaciones de mezcla y complemento (Other).
+
+Frontend:
+  - React 18+ con TypeScript.
+  - Vite como bundler y dev server.
+  - Web Audio API para reproducción multipista sample-accurate.
+  - TailwindCSS o CSS Modules para estilos.
+  - Componentes accesibles (ARIA, navegación por teclado).
+
+Comunicación:
+  - REST API para operaciones síncronas (metadatos, configuración).
+  - Server-Sent Events (SSE) o WebSockets para progreso en tiempo real.
+  - Descarga de archivos mediante endpoints REST con Content-Disposition.
+
+Despliegue:
+  - Script de arranque (PowerShell y bash) que inicia el servidor local.
+  - Opcional: Docker Compose para aislamiento del entorno.
+  - El servidor escucha únicamente en 127.0.0.1 (nunca en 0.0.0.0).
+
+────────────────────────────────────────────────────────────────────────────────
+3. ENTORNO DE CONSTRUCCIÓN
+────────────────────────────────────────────────────────────────────────────────
+
+El desarrollo y las pruebas deben ejecutarse en el PC local del usuario
+(Windows 10/11 como objetivo principal, compatible con Linux/macOS si es
+sencillo).
+
+Configura un proyecto reproducible mediante:
+  - pyproject.toml con dependencias fijadas y hashes cuando sea posible.
+  - requirements.lock o poetry.lock para reproducibilidad exacta.
+  - package.json con versiones fijadas para el frontend.
+  - Scripts de arranque que verifiquen dependencias antes de iniciar.
+  - Estructura de carpetas clara y documentada.
+
+Estructura propuesta:
+  limbus-split-pro/
+  ├── backend/
+  │   ├── app/
+  │   │   ├── main.py              # FastAPI app
+  │   │   ├── api/                 # Routers (upload, separate, mixer, export)
+  │   │   ├── engine/              # Lógica de separación
+  │   │   │   ├── pipeline.py      # Orquestador del pipeline en cascada
+  │   │   │   ├── demucs_engine.py # Wrapper de Demucs
+  │   │   │   ├── bsrnn_engine.py  # Wrapper de BSRNN
+  │   │   │   ├── dereverb.py      # Wrapper de-reverb
+  │   │   │   ├── vocals_split.py  # Wrapper lead/backing (experimental)
+  │   │   │   └── other_logic.py   # Lógica de complemento
+  │   │   ├── models/              # Gestión de modelos (descarga, hash, manifiesto)
+  │   │   ├── audio/               # Operaciones de audio (mezcla, export, metadata)
+  │   │   └── config.py            # Configuración
+  │   ├── tests/
+  │   ├── pyproject.toml
+  │   └── requirements.lock
+  ├── frontend/
+  │   ├── src/
+  │   │   ├── components/          # Mezclador, pistas, controles
+  │   │   ├── hooks/               # useAudioContext, useSSE, etc.
+  │   │   ├── services/            # API client
+  │   │   ├── types/
+  │   │   └── App.tsx
+  │   ├── package.json
+  │   └── vite.config.ts
+  ├── models/                      # Modelos descargados (gitignored)
+  ├── scripts/
+  │   ├── start.ps1                # Arranque Windows
+  │   ├── start.sh                 # Arranque Linux/macOS
+  │   ├── setup.ps1                # Instalación de dependencias
+  │   └── verify_models.py         # Verificación de hashes
+  ├── docs/
+  ├── THIRD_PARTY_NOTICES.txt
+  ├── MODEL_MANIFEST.json
+  └── README.md
+
+────────────────────────────────────────────────────────────────────────────────
+4. NOMBRE, IDENTIDAD Y DISEÑO
+────────────────────────────────────────────────────────────────────────────────
+
+Nombre del producto: Limbus Split Pro.
+
+El diseño debe ser:
+  - Minimalista y limpio.
+  - Elegante y profesional.
+  - Amigable y con personalidad visual.
+  - Con una paleta de color reconocible y algo divertida, sin resultar infantil.
+
+Evita una interfaz genérica, excesivamente gris o con aspecto de prototipo.
+No utilices el eslogan "Una mezcla. Solo lo que necesitas".
+
+Requisitos de diseño web:
+  - Responsive: funcional desde 1024px de ancho en adelante.
+  - Temas claro y oscuro con toggle.
+  - Contraste alto (WCAG AA mínimo).
+  - Navegación completa mediante teclado (Tab, Enter, Escape, Espacio).
+  - Nombres ARIA en todos los controles interactivos.
+  - Tipografía legible (Inter, system-ui o similar).
+  - Animaciones sutiles (transiciones de 150-300ms, sin motion excesivo).
+  - Iconografía consistente (Lucide, Heroicons o similar).
+
+────────────────────────────────────────────────────────────────────────────────
+5. FLUJO PRINCIPAL
+────────────────────────────────────────────────────────────────────────────────
+
+El usuario debe poder:
+  1. Arrastrar una canción al navegador o seleccionarla con un input de archivo.
+  2. Ver nombre, formato, duración, frecuencia de muestreo y canales.
+  3. Elegir exactamente qué elementos desea separar (ver sección 6).
+  4. Elegir una carpeta de exportación (mediante la API File System Access
+     o, como fallback, descargar un ZIP).
+  5. Iniciar la separación.
+  6. Ver progreso real y etapa actual del pipeline.
+  7. Cancelar de forma segura.
+  8. Escuchar simultáneamente todas las pistas generadas en un mezclador web.
+  9. Aplicar mute, solo y volumen independiente a cada pista.
+  10. Cambiar el punto de reproducción mediante una línea temporal.
+  11. Exportar pistas individuales (descarga directa).
+  12. Exportar una mezcla con los volúmenes, mute y solo actuales.
+  13. Abrir la carpeta de resultados (si File System Access API está disponible)
+      o descargar todo como ZIP.
+
+Nunca guardes resultados en una ubicación desconocida. El usuario debe poder
+elegir explícitamente dónde exportar o descargar los archivos.
+
+Admite archivos con nombres Unicode, espacios y caracteres especiales.
+Nunca construyas rutas concatenando texto sin sanitizar.
+
+────────────────────────────────────────────────────────────────────────────────
+6. SELECTOR DE PISTAS
+────────────────────────────────────────────────────────────────────────────────
+
+La interfaz debe disponer de controles "Todas" y "Ninguna", además de
+selectores individuales organizados por categorías.
+
+Categorías deseadas:
+
+  VOCES:
+    • Voces (pista completa de voz).
+    • Voz principal (lead vocals).
+    • Coros y segundas voces (backing vocals) → MUTEADO POR DEFECTO.
+    • Efectos vocales / reverberación vocal → MUTEADO POR DEFECTO.
+    • Ruido o artefactos vocales.
+
+  BATERÍA:
+    • Batería completa.
+    • Bombo (kick).
+    • Caja (snare).
+    • Toms.
+    • Platos (cymbals/hi-hat).
+
+  BAJO:
+    • Bajo.
+
+  GUITARRA:
+    • Guitarra (pista general).
+    • Guitarra acústica → solo si existe un modelo realmente capaz.
+    • Guitarra eléctrica → solo si existe un modelo realmente capaz.
+
+  TECLADOS:
+    • Piano y teclados (pista general).
+    • Piano → MUTEADO POR DEFECTO si se separa de sintes.
+    • Sintetizadores → MUTEADO POR DEFECTO si se separa de piano.
+
+  OTROS:
+    • Otros instrumentos que puedan separarse mediante modelos reales.
+    • Other (complemento matemático de todo lo no seleccionado).
+
+Reglas obligatorias:
+  - No muestres opciones falsas ni generes archivos silenciosos para aparentar
+    que una separación existe.
+  - Si no existe un modelo técnicamente válido:
+      • Deja la opción desactivada (disabled) con un tooltip explicativo.
+      • Explica por qué no está disponible.
+      • No generes una pista vacía.
+      • Registra la limitación en el informe.
+  - Las pistas marcadas como "MUTEADO POR DEFECTO" deben aparecer en el
+    mezclador con mute activado, pero el audio debe existir realmente.
+    El usuario puede desmutearlas manualmente.
+
+────────────────────────────────────────────────────────────────────────────────
+7. LÓGICA DE OTHER
+────────────────────────────────────────────────────────────────────────────────
+
+La lógica de complemento es obligatoria.
+
+  - Si el usuario selecciona solamente "Voces", exporta "Voces.wav" y
+    "Other.wav". Other debe contener todo lo que no sea voz.
+  - Si selecciona solamente "Batería", exporta "Batería completa.wav",
+    sus sub-stems cuando corresponda, y "Other.wav". Other debe contener
+    todo lo que no sea batería.
+  - Si selecciona varios instrumentos, Other debe contener todo aquello
+    que no haya sido seleccionado.
+  - Si selecciona todas las categorías, genera Other solamente si queda
+    material residual real.
+  - Other no debe ser un archivo silencioso creado artificialmente.
+  - La suma de las pistas principales y Other debe reconstruir la mezcla
+    con el menor error posible.
+  - Evita duplicar material cuando se exporta simultáneamente una pista
+    general y sus subpistas (ej: si exporta "Batería completa" y también
+    "Bombo", "Caja", etc., Other no debe contener la batería duplicada).
+
+Para voces detalladas:
+  - Voz principal y coros deben proceder de una separación real.
+  - Los efectos vocales (reverb) deben proceder de un modelo de de-reverb real.
+  - El ruido debe ser una pista independiente real.
+  - Ejecuta internamente las etapas necesarias aunque el usuario no haya
+    seleccionado sus resultados intermedios.
+  - No obligues al usuario a entender dependencias entre modelos.
+
+Implementación técnica de Other:
+  - Other = mezcla_original - suma(pistas_seleccionadas).
+  - Realiza la resta en el dominio del sample con precisión float32/float64.
+  - Alinea todas las pistas al mismo offset temporal antes de restar.
+  - Verifica que Other no sea silencioso (RMS > umbral) antes de exportarlo.
+  - Si Other es silencioso, no lo exportes y notifica al usuario.
+
+────────────────────────────────────────────────────────────────────────────────
+8. PIPELINE DE SEPARACIÓN EN CASCADA
+────────────────────────────────────────────────────────────────────────────────
+
+Este es el corazón de la aplicación. El pipeline maximiza la separación
+ejecutando múltiples modelos en secuencia, cada uno refinando el resultado
+del anterior.
+
+Arquitectura del pipeline:
+
+  ENTRADA: mezcla.wav (archivo original del usuario)
+    │
+    ▼
+  ┌─────────────────────────────────────────────┐
+  │ ETAPA 1: Separación 4-stem (Demucs)       │
+  │ Modelo: htdemucs_ft                        │
+  │ Salida: vocals, drums, bass, other         │
+  └──────────────────┬──────────────────────────┘
+                     │
+        ┌────────────┼────────────┬──────────────┐
+        ▼            ▼            ▼              ▼
+  ┌──────────┐ ┌──────────┐ ┌──────────┐ ┌──────────────┐
+  │ ETAPA 2  │ │ ETAPA 5  │ │ (bass    │ │ ETAPA 4      │
+  │ Vocals   │ │ Drums    │ │  directo)│ │ Other →      │
+  │ cascade  │ │ sub-stems│ │          │ │ instrumentos │
+  └────┬─────┘ └────┬─────┘ └──────────┘ └──────┬───────┘
+       │            │                           │
+       ▼            ▼                           ▼
+  ┌──────────┐ ┌──────────┐             ┌──────────────┐
+  │ ETAPA 2a │ │ kick     │             │ piano        │
+  │ De-reverb│ │ snare    │             │ synths       │
+  │ vocals   │ │ toms     │             │ guitar       │
+  └────┬─────┘ │ cymbals  │             │ (experimental│
+       │       └──────────┘             └──────────────┘
+       ▼
+  ┌──────────┐
+  │ ETAPA 3  │
+  │ Lead vs  │
+  │ Backing  │
+  │ vocals   │
+  │(experim.)│
+  └──────────┘
+
+Definición detallada de cada etapa:
+
+ETAPA 1 — Separación 4-stem:
+  Modelo: Demucs htdemucs_ft (Meta FAIR).
+  Entrada: mezcla original.
+  Salida: vocals.wav, drums.wav, bass.wav, other.wav.
+  Estado: Probado, calidad profesional.
+  Licencia: Código MIT, pesos CC BY-NC 4.0 (viable para uso propio).
+  Notas: Esta etapa se ejecuta siempre, independientemente de lo que
+  el usuario seleccione, porque las etapas posteriores dependen de ella.
+
+ETAPA 2 — De-reverb vocal:
+  Modelo: Investigar entre opciones disponibles:
+    - Modelos de UVR (Reverb-Echo, DeReverb).
+    - Modelos académicos de speech dereverberation adaptados a música.
+  Entrada: vocals.wav (salida de Etapa 1).
+  Salida: vocals_dry.wav (voz sin reverb), vocals_reverb.wav (solo reverb).
+  Estado: Funcional pero calidad variable. Documentar honestamente.
+  Comportamiento: vocals_reverb.wav se presenta MUTEADO POR DEFECTO.
+  Si no se encuentra un modelo adecuado:
+    - Desactivar la opción de separar reverb vocal.
+    - vocals_dry.wav = vocals.wav (sin procesar).
+    - Documentar la limitación.
+
+ETAPA 3 — Lead vs Backing vocals:
+  Modelo: Investigar opciones:
+    - Modelos de UVR para separación lead/backing.
+    - Modelos académicos (verificar disponibilidad de pesos).
+  Entrada: vocals_dry.wav (o vocals.wav si Etapa 2 no está disponible).
+  Salida: lead_vocals.wav, backing_vocals.wav.
+  Estado: EXPERIMENTAL. No hay modelos públicos con calidad profesional
+  verificada en 2026.
+  Comportamiento:
+    - backing_vocals.wav se presenta MUTEADO POR DEFECTO.
+    - Si el modelo no existe o la calidad es inaceptable:
+        • Desactivar las opciones "Voz principal" y "Coros" en la UI.
+        • Explicar: "No existe un modelo público fiable para esta
+          separación en la actualidad."
+        • No generar archivos silenciosos.
+    - Si se encuentra un modelo funcional pero de calidad media:
+        • Marcar claramente como "Experimental - calidad variable".
+        • Permitir al usuario activarlo bajo su responsabilidad.
+
+ETAPA 4 — Separación de instrumentos en "Other":
+  Modelo: Investigar opciones:
+    - Modelos multi-instrument (MusDB18-trained, etc.).
+    - BSRNN con targets específicos.
+  Entrada: other.wav (salida de Etapa 1).
+  Salida: guitar.wav, piano.wav, synths.wav, etc.
+  Estado: EXPERIMENTAL / PARCIAL.
+  Comportamiento:
+    - Piano y sintes se presentan MUTEADOS POR DEFECTO si se separan.
+    - Si no hay modelo fiable para una categoría:
+        • Desactivar la opción en la UI.
+        • No generar archivos silenciosos.
+    - Guitarra acústica vs eléctrica: desactivada salvo que exista
+      un modelo verificado.
+    - Si la separación es de baja calidad, marcar como "Experimental".
+
+ETAPA 5 — Sub-stems de batería:
+  Modelo: BSRNN de ByteDance (music_source_separation) con checkpoints
+  de drums sub-stems.
+  Entrada: drums.wav (salida de Etapa 1).
+  Salida: kick.wav, snare.wav, toms.wav, cymbals.wav.
+  Estado: Probado, calidad profesional.
+  Licencia: MIT (código y pesos, verificar cada checkpoint).
+  Notas: Esta es la separación de sub-stems más fiable disponible.
+
+Reglas del pipeline:
+  1. Las etapas se ejecutan solo si el usuario ha seleccionado algo que
+     las requiere. No proceses Etapa 5 si el usuario solo quiere voces.
+  2. Sin embargo, si el usuario selecciona "Voz principal" (Etapa 3),
+     debes ejecutar Etapa 1 y Etapa 2 internamente aunque no haya
+     seleccionado "Voces" o "Reverb vocal" explícitamente.
+  3. El progreso debe mostrar la etapa actual: "Etapa 1/5: Separando
+     mezcla en 4 stems...", "Etapa 2/5: Eliminando reverb vocal...", etc.
+  4. Si una etapa falla, registra el error, continúa con las etapas
+     independientes y marca las pistas afectadas como no disponibles.
+  5. Nunca generes una pista vacía para rellenar un hueco del pipeline.
+  6. Cada etapa debe verificar que su entrada no es un archivo silencioso
+     antes de procesar (RMS > umbral configurable).
+
+Gestión de dependencias entre etapas:
+  - El usuario no necesita saber qué etapas se ejecutan internamente.
+  - Si selecciona "Bombo", el sistema ejecuta Etapa 1 + Etapa 5.
+  - Si selecciona "Voz principal", el sistema ejecuta Etapa 1 + Etapa 2
+    (opcional) + Etapa 3.
+  - Si selecciona "Piano", el sistema ejecuta Etapa 1 + Etapa 4.
+  - La UI muestra un resumen: "Se ejecutarán 3 etapas de separación"
+    antes de iniciar.
+
+────────────────────────────────────────────────────────────────────────────────
+9. INVESTIGACIÓN Y MOTOR DE SEPARACIÓN
+────────────────────────────────────────────────────────────────────────────────
+
+Investiga modelos actuales antes de escogerlos. Utiliza fuentes primarias:
+repositorios oficiales, model cards, publicaciones de los autores y licencias
+incluidas con los pesos.
+
+Condiciones obligatorias:
+  - Procesamiento completamente local.
+  - Sin subir canciones a ningún servidor externo.
+  - Sin llamadas a APIs externas durante la separación.
+  - Sin descargar modelos silenciosamente mientras se procesa una pista.
+  - Gestión explícita de la descarga e instalación de modelos.
+  - Hash SHA-256 de cada modelo descargado.
+  - Registro de procedencia, versión, licencia, autor y capacidades.
+  - Diferenciación entre licencia del código y licencia de los pesos.
+  - Prohibición de asumir que los pesos son comerciales porque el
+    repositorio sea MIT.
+
+Dado que es uso propio e interno:
+  - Se permite el uso de modelos con licencia CC BY-NC (como Demucs).
+  - Se permite el uso de modelos con licencias ambiguas si se documenta
+    claramente la ambigüedad y el riesgo.
+  - No se requiere autorización comercial explícita.
+  - Aun así, prefiere modelos con licencias claras (MIT, Apache 2.0)
+    cuando existan alternativas de calidad equivalente.
+
+Implementa un manifiesto (MODEL_MANIFEST.json) con:
+  - Identificador único.
+  - Ruta relativa dentro de models/.
+  - Hash SHA-256.
+  - Tamaño esperado.
+  - Versión.
+  - Origen (URL del repositorio o release).
+  - Licencia del código.
+  - Licencia de los pesos.
+  - Evidencia de licencia (enlace al archivo LICENSE o model card).
+  - Autor y atribución requerida.
+  - Capacidades (qué stems puede separar).
+  - Estado: "production", "experimental", "unavailable".
+  - Notas sobre calidad y limitaciones conocidas.
+
+Implementa un verificador de modelos:
+  - Al arrancar el servidor, verifica que todos los modelos requeridos
+    están presentes y que sus hashes coinciden.
+  - Si falta un modelo, muestra instrucciones claras de descarga.
+  - Si un hash no coincide, alerta y no utilices ese modelo.
+  - Los modelos marcados como "experimental" pueden omitirse sin error.
+  - Los modelos marcados como "unavailable" desactivan su opción en la UI.
+
+────────────────────────────────────────────────────────────────────────────────
+10. ARQUITECTURA DEL MOTOR
+────────────────────────────────────────────────────────────────────────────────
+
+La aplicación tiene dos componentes principales que se ejecutan en el mismo
+PC pero como procesos separados:
+
+Componente 1 — Servidor FastAPI (Python):
+  - Escucha en 127.0.0.1:8000 (nunca en 0.0.0.0).
+  - Gestiona la API REST, SSE/WebSockets y la descarga de archivos.
+  - Orquesta el pipeline de separación.
+  - Ejecuta los modelos de IA.
+  - Gestiona el sistema de archivos local (lectura de entrada, escritura
+    de salida).
+
+Componente 2 — Frontend React (navegador):
+  - Se sirve desde el propio FastAPI (archivos estáticos) o desde Vite
+    dev server en desarrollo (con proxy a FastAPI).
+  - Gestiona la UI, el mezclador y la interacción del usuario.
+  - Se comunica con el backend exclusivamente mediante HTTP/WebSocket
+    a localhost.
+
+Comunicación:
+  - REST para: subir archivo, obtener metadatos, iniciar separación,
+    descargar pistas, exportar mezcla, obtener estado de modelos.
+  - SSE para: progreso de separación en tiempo real (etapa, porcentaje,
+    ETA, errores).
+  - WebSocket (alternativa a SSE): si se necesita comunicación bidireccional
+    (ej: cancelar proceso).
+
+Cancelación:
+  - El frontend envía una señal de cancelación (REST o WebSocket).
+  - El backend detiene la etapa actual de forma limpia.
+  - Se eliminan los archivos temporales de la etapa cancelada.
+  - Se conservan los resultados de etapas ya completadas.
+  - Se notifica al frontend del estado final.
+
+Limpieza:
+  - Al cerrar el servidor (Ctrl+C o señal), finaliza cualquier proceso
+    de inferencia en curso.
+  - No deja procesos Python huérfanos.
+  - Limpia archivos temporales de sesiones anteriores al arrancar.
+
+────────────────────────────────────────────────────────────────────────────────
+11. GESTIÓN DE PYTHON Y DEPENDENCIAS
+────────────────────────────────────────────────────────────────────────────────
+
+Opción A (recomendada para uso propio):
+  - Utilizar el Python del sistema del usuario (3.11+).
+  - Crear un virtualenv aislado (.venv dentro del proyecto).
+  - El script de arranque activa el virtualenv automáticamente.
+  - requirements.lock con versiones exactas.
+
+Opción B (máxima reproducibilidad):
+  - Descargar un Python embeddable oficial de python.org.
+  - Configurar PYTHONHOME y PYTHONNOUSERSITE.
+  - Instalar dependencias en un directorio controlado.
+  - Sin acceso a site-packages del usuario.
+
+Requisitos comunes:
+  - Versión exacta de Python documentada.
+  - pyproject.toml con todas las dependencias y versiones.
+  - Script de setup que cree el entorno y verifique todo.
+  - Cachés de PyTorch, HuggingFace y modelos en una carpeta controlada
+    dentro del proyecto o en %LOCALAPPDATA%/LimbusSplitPro/.
+  - No dependas de pip, conda ni herramientas del sistema más allá de
+    Python 3.11+.
+
+Dependencias Python clave (versiones a fijar tras investigación):
+  - fastapi
+  - uvicorn[standard]
+  - torch (versión CPU o CUDA según el equipo)
+  - demucs
+  - soundfile
+  - librosa
+  - numpy
+  - pydub (opcional, para manejo de formatos)
+  - python-multipart (para uploads)
+  - sse-starlette (para SSE)
+
+────────────────────────────────────────────────────────────────────────────────
+12. CPU, GPU Y ACELERACIÓN
+────────────────────────────────────────────────────────────────────────────────
+
+La aplicación debe funcionar siempre en CPU, aunque sea más lenta.
+
+Detecta de forma segura:
+  - CPU y memoria RAM disponible.
+  - GPU NVIDIA compatible (torch.cuda.is_available()).
+  - Versión de CUDA y cuDNN si están presentes.
+
+Requisitos:
+  - Selector en la UI: Automático, CPU, GPU (cuando corresponda).
+  - Fallback automático a CPU si GPU falla, con explicación clara.
+  - Prueba previa de memoria antes de procesar canciones largas.
+  - División en segmentos (chunking) sin perder continuidad para evitar OOM.
+  - Mensajes comprensibles ante memoria insuficiente.
+  - Misma frecuencia de muestreo, duración y alineación independientemente
+    del dispositivo de procesamiento.
+
+Estimación de tiempo:
+  - Muestra un ETA aproximado basado en la duración del audio y el
+    dispositivo seleccionado.
+  - Actualiza el ETA a medida que avanza el procesamiento.
+
+────────────────────────────────────────────────────────────────────────────────
+13. FFMPEG Y FORMATOS DE AUDIO
+────────────────────────────────────────────────────────────────────────────────
+
+Formatos de entrada admitidos:
+  - WAV (nativo, sin dependencias externas).
+  - MP3, FLAC, AAC, M4A, OGG (mediante FFmpeg).
+
+Formatos de exportación:
+  - WAV PCM 16-bit o 24-bit (obligatorio).
+  - FLAC (opcional, si FFmpeg o soundfile lo soportan).
+  - MP3 320kbps (opcional, mediante FFmpeg).
+
+FFmpeg:
+  - Incluye un binario de FFmpeg dentro del proyecto o descárgalo
+    automáticamente en el setup.
+  - No dependas del FFmpeg del PATH del sistema.
+  - Documenta la versión, la compilación (LGPL/GPL) y el hash.
+  - Si la compilación es GPL, documenta las implicaciones (aunque para
+    uso propio no es crítico).
+  - Utiliza FFmpeg solo como subprocess con argumentos seguros
+    (lista de argumentos, nunca concatenación de strings).
+
+Metadatos:
+  - Al cargar un archivo, extrae y muestra:
+      • Nombre del archivo.
+      • Formato/codec.
+      • Duración (mm:ss).
+      • Frecuencia de muestreo (Hz).
+      • Número de canales.
+      • Profundidad de bits (si aplica).
+      • Tamaño del archivo.
+
+────────────────────────────────────────────────────────────────────────────────
+14. LICENCIAS Y ATRIBUCIONES
+────────────────────────────────────────────────────────────────────────────────
+
+Aunque es uso propio, mantén buenas prácticas:
+
+Genera y mantén:
+  - THIRD_PARTY_NOTICES.txt con todas las dependencias y sus licencias.
+  - MODEL_MANIFEST.json con la información de cada modelo.
+  - Carpeta licenses/ con los textos completos de las licencias relevantes.
+
+Para cada dependencia y modelo:
+  - Registra nombre, versión, autor, licencia y URL.
+  - Diferencia entre licencia del código y licencia de los pesos.
+  - No asumas compatibilidad sin verificar.
+
+────────────────────────────────────────────────────────────────────────────────
+15. REPRODUCCIÓN DE AUDIO EN EL NAVEGADOR
+────────────────────────────────────────────────────────────────────────────────
+
+La reproducción debe comportarse como un mezclador multipista preciso.
+
+Utiliza la Web Audio API con las siguientes reglas estrictas:
+
+  - Un único AudioContext maestro para toda la aplicación.
+  - Todas las pistas se cargan como AudioBuffer mediante fetch +
+    audioContext.decodeAudioData().
+  - Cada pista tiene su propio AudioBufferSourceNode (o se reutilizan
+    tras cada stop/seek).
+  - Cada pista tiene su propio GainNode para volumen/mute.
+  - Todos los GainNode se conectan al destination del AudioContext.
+
+Sincronización:
+  - Todas las pistas deben comenzar en el mismo sample.
+  - Utiliza audioContext.currentTime como reloj maestro.
+  - Al dar play, programa todos los sourceNode.start() con el mismo
+    offset calculado desde currentTime.
+  - Al hacer seek, detén todos los sourceNode, calcula el nuevo offset
+    y vuelve a crearlos y programarlos.
+  - No utilices setTimeout ni setInterval para la sincronización; usa
+    requestAnimationFrame solo para actualizar la UI (barra de progreso).
+
+Solo logic:
+  - Cuando al menos un solo está activo, solo suenan las pistas en solo
+    (excepto las que también estén en mute).
+  - Implementa esto ajustando el gain de cada GainNode:
+      • Si hay solos activos y esta pista no tiene solo → gain = 0.
+      • Si esta pista tiene mute → gain = 0.
+      • En otro caso → gain = volumen del slider.
+  - Los cambios de gain deben usar linearRampToValueAtTime con una
+    rampa corta (5-20ms) para evitar clics.
+
+Mute/Solo/Volumen:
+  - Mute no detiene la reproducción.
+  - Solo no detiene la reproducción.
+  - Cambiar volumen no detiene la reproducción.
+  - Estos cambios no devuelven el cursor al inicio.
+  - Utiliza rampas de ganancia cortas (5-20ms) para evitar clics.
+
+Seek:
+  - Seek no produce rebote, doble ataque, clic o silencio perceptible.
+  - Implementa crossfade o rampas de ganancia cortas al hacer seek.
+  - Tras seek, continúa desde el punto seleccionado.
+
+Atajo de espacio:
+  - Espacio alterna play/pausa.
+  - No se activa al escribir en campos de texto, textareas o selects.
+  - No se activa mientras un diálogo modal está abierto.
+  - Previene el scroll por defecto del navegador al pulsar espacio.
+
+Gestión de AudioContext:
+  - El AudioContext puede estar en estado "suspended" hasta la primera
+    interacción del usuario. Resume() al primer clic.
+  - Gestiona el cambio de dispositivo de audio del sistema (el navegador
+    lo maneja automáticamente en la mayoría de casos).
+  - Si el AudioContext se cierra o falla, muestra un error claro y
+    permite reiniciarlo.
+
+────────────────────────────────────────────────────────────────────────────────
+16. CONTROLES Y COMPORTAMIENTO EN TIEMPO REAL
+────────────────────────────────────────────────────────────────────────────────
+
+Controles generales del reproductor:
+  - Play (▶).
+  - Pausa (⏸).
+  - Stop (⏹) con semántica clara: detiene y reinicia la posición a 0.
+  - Barra de progreso interactiva (clic y arrastre para seek).
+  - Tiempo actual (mm:ss.ms o mm:ss).
+  - Duración total (mm:ss).
+  - Tecla espacio para alternar play/pausa.
+
+Comportamiento obligatorio:
+  - Mute no detiene la reproducción.
+  - Solo no detiene la reproducción.
+  - Volumen no detiene la reproducción.
+  - Estos cambios no devuelven el cursor al inicio.
+  - Seek continúa desde el punto seleccionado.
+  - Seek no produce rebote, doble ataque, clic o silencio perceptible.
+  - Play después de pausa continúa desde la posición actual.
+  - Play después de stop comienza desde el inicio.
+
+────────────────────────────────────────────────────────────────────────────────
+17. MEZCLADOR
+────────────────────────────────────────────────────────────────────────────────
+
+Cada pista debe mostrar:
+  - Nombre descriptivo (ej: "Voz principal", "Bombo", "Other").
+  - Color o icono identificativo por categoría.
+  - Indicador visual de estado: "production", "experimental".
+  - Botón Mute (M) con estado visual claro.
+  - Botón Solo (S) con estado visual claro.
+  - Slider de volumen (0-100% o dB).
+  - Valor numérico del volumen.
+  - Indicador de que la pista está muteada por defecto (badge o tooltip).
+  - Medidor de nivel opcional (solo si no afecta al rendimiento).
+
+Organización:
+  - Agrupa las pistas por categoría (Voces, Batería, Bajo, Guitarra,
+    Teclados, Otros).
+  - Permite colapsar/expandir cada grupo.
+  - Ordena las pistas dentro de cada grupo de forma lógica
+    (general → específico).
+
+Comportamiento:
+  - Permite uno o varios solos simultáneos.
+  - Cuando existe al menos un solo activo, solamente suenan las pistas
+    en solo, excepto las que también estén en mute.
+  - Los cambios de mute/solo/volumen utilizan rampas para evitar clics.
+  - Las pistas muteadas por defecto aparecen con el botón Mute activado
+    y un indicador visual (ej: badge "Muteado por defecto").
+
+────────────────────────────────────────────────────────────────────────────────
+18. EXPORTACIÓN DE MEZCLA
+────────────────────────────────────────────────────────────────────────────────
+
+Añade un botón "Exportar mezcla".
+
+La mezcla exportada debe respetar exactamente:
+  - Volumen por pista (aplicado como ganancia lineal).
+  - Mute (pistas muteadas no contribuyen).
+  - Solo (si hay solos activos, solo las pistas en solo contribuyen).
+  - Alineación sample-accurate.
+  - Duración completa.
+  - Frecuencia de muestreo de la pista de mayor calidad (o la original).
+  - Canales (estéreo si la original es estéreo).
+  - Punto inicial común.
+
+Implementación:
+  - Realiza la exportación offline en el servidor (Python), no en el
+    navegador.
+  - El frontend envía al backend el estado actual del mezclador:
+    [{track_id, volume, mute, solo}, ...].
+  - El backend mezcla las pistas con precisión float64, aplica gain,
+    gestiona solo/mute, y escribe el WAV resultante.
+  - Evita clipping:
+      • Calcula el pico final.
+      • Si hay clipping, avisa al usuario y ofrece:
+          a) Normalizar (reducir ganancia global).
+          b) Aplicar un limiter suave.
+          c) Exportar tal cual (con clipping).
+      • No normalices silenciosamente.
+      • Documenta cualquier procesamiento aplicado.
+  - Exporta como mínimo WAV PCM 16-bit. Opcionalmente 24-bit, FLAC, MP3.
+
+Exportación individual:
+  - Cada pista tiene un botón "Descargar" que descarga el archivo
+    individual sin procesar (tal como lo generó el modelo).
+
+────────────────────────────────────────────────────────────────────────────────
+19. INTERFAZ
+────────────────────────────────────────────────────────────────────────────────
+
+Layout principal (dos paneles o layout adaptable):
+
+Panel izquierdo / superior (Configuración):
+  1. Zona de carga de archivo (drag & drop + botón para seleccionar).
+  2. Metadatos del archivo cargado (nombre, formato, duración, etc.).
+  3. Selector de pistas a extraer (con categorías, Todas/Ninguna).
+  4. Resumen del pipeline: "Se ejecutarán N etapas de separación".
+  5. Selector de dispositivo (Automático / CPU / GPU).
+  6. Selector de formato de exportación (WAV 16-bit, WAV 24-bit, FLAC, MP3).
+  7. Botón "Separar" (grande, prominente).
+  8. Botón "Cancelar" (visible solo durante el procesamiento).
+
+Panel derecho / inferior (Resultados):
+  1. Estado del proceso (etapa actual, progreso %, ETA, errores).
+  2. Reproductor general (play, pausa, stop, barra temporal, tiempo).
+  3. Mezclador de pistas (lista de pistas con mute, solo, volumen).
+  4. Botón "Exportar mezcla".
+  5. Botón "Descargar todo como ZIP".
+  6. Botón "Nueva separación" (limpia todo y vuelve al inicio).
+
+Durante la separación:
+  - Muestra la etapa actual con nombre descriptivo.
+  - Barra de progreso por etapa y progreso global.
+  - Modelo en uso y dispositivo (CPU/GPU).
+  - ETA estimado.
+  - Errores comprensibles (no traces de Python en la UI).
+  - El detalle técnico va a logs; la UI muestra una explicación clara
+    con posible solución.
+
+Estados de la UI:
+  - Idle: esperando archivo.
+  - Loaded: archivo cargado, mostrando metadatos y selector.
+  - Processing: separación en curso.
+  - Done: resultados listos, mezclador activo.
+  - Error: fallo con explicación y opción de reintentar.
+
+────────────────────────────────────────────────────────────────────────────────
+20. RUTAS, PERMISOS Y DATOS
+────────────────────────────────────────────────────────────────────────────────
+
+Datos del proyecto:
+  - El proyecto reside en una carpeta elegida por el usuario.
+  - Los modelos se descargan a models/ dentro del proyecto o a
+    %LOCALAPPDATA%/LimbusSplitPro/Models/.
+  - Los cachés (PyTorch, HuggingFace) se redirigen a una carpeta
+    controlada mediante variables de entorno.
+  - Los archivos temporales de procesamiento se crean en una carpeta
+    temp/ dentro del proyecto o en %TEMP%/LimbusSplitPro/.
+
+Archivos de entrada:
+  - Se leen desde la ubicación que el usuario elija (upload desde el
+    navegador).
+  - Se copian a una carpeta de trabajo temporal para evitar problemas
+    con rutas largas, Unicode o archivos bloqueados.
+
+Archivos de salida:
+  - Se escriben en la carpeta de trabajo temporal del servidor.
+  - Se descargan mediante el navegador (descarga directa o ZIP).
+  - Si File System Access API está disponible (Chrome/Edge), permite
+    al usuario elegir una carpeta de destino y escribir directamente.
+
+Limpieza:
+  - Los temporales se limpian tras una exportación exitosa.
+  - Se conservan ante un fallo para diagnóstico.
+  - Al arrancar el servidor, se limpian temporales de sesiones anteriores.
+
+────────────────────────────────────────────────────────────────────────────────
+21. SERVIDOR LOCAL Y ARRANQUE
+────────────────────────────────────────────────────────────────────────────────
+
+Script de arranque (start.ps1 / start.sh):
+  1. Verifica que Python 3.11+ está disponible (o usa el virtualenv).
+  2. Verifica que el virtualenv existe; si no, ejecuta setup.
+  3. Activa el virtualenv.
+  4. Verifica que todas las dependencias están instaladas.
+  5. Verifica que los modelos requeridos están presentes y sus hashes
+     coinciden.
+  6. Si falta algún modelo, muestra instrucciones de descarga y pregunta
+     si desea descargar ahora.
+  7. Inicia el servidor FastAPI en 127.0.0.1:8000.
+  8. Abre el navegador en http://localhost:8000.
+  9. Muestra un mensaje claro: "Limbus Split Pro está ejecutándose en
+     http://localhost:8000. No cierres esta ventana."
+
+Script de setup (setup.ps1 / setup.sh):
+  1. Crea el virtualenv.
+  2. Instala dependencias desde requirements.lock.
+  3. Descarga FFmpeg si no está presente.
+  4. Descarga los modelos requeridos (con barra de progreso).
+  5. Verifica hashes.
+  6. Genera MODEL_MANIFEST.json.
+
+Seguridad del servidor:
+  - Escucha únicamente en 127.0.0.1 (nunca 0.0.0.0).
+  - No tiene autenticación (es local y de uso propio), pero documenta
+    que no debe exponerse a la red.
+  - CORS configurado para permitir solo localhost.
+  - Validación de entrada en todos los endpoints.
+  - Límite de tamaño de upload configurable (por defecto 500MB).
+  - Sanitización de nombres de archivo.
+
+────────────────────────────────────────────────────────────────────────────────
+22. LOGS, ERRORES Y RECUPERACIÓN
+────────────────────────────────────────────────────────────────────────────────
+
+Logs:
+  - Guarda logs rotativos en logs/ dentro del proyecto o en
+    %LOCALAPPDATA%/LimbusSplitPro/Logs/.
+  - Niveles: DEBUG, INFO, WARNING, ERROR.
+  - Formato: timestamp, nivel, módulo, mensaje.
+  - No registres contenido de audio, rutas completas del usuario ni
+    datos sensibles sin necesidad.
+
+Mensajes de error en la UI:
+  - Diferencia entre:
+      • Modelo ausente o hash incorrecto.
+      • Formato de audio no compatible.
+      • Memoria insuficiente (RAM o GPU).
+      • GPU no compatible o driver desactualizado.
+      • Archivo corrupto o truncado.
+      • Permiso denegado en carpeta de destino.
+      • Cancelación del usuario.
+      • Error interno (con referencia al log para detalle).
+  - Nunca muestres una traza de Python como único mensaje.
+  - Muestra una explicación clara con posible solución.
+  - Guarda el detalle técnico en el log.
+
+Recuperación:
+  - Si una etapa del pipeline falla, las etapas independientes pueden
+    continuar.
+  - Si el servidor se cierra inesperadamente, al reiniciar debe limpiar
+    temporales huérfanos y estar listo para una nueva sesión.
+  - No debe requerir reiniciar el PC ante ningún fallo.
+
+────────────────────────────────────────────────────────────────────────────────
+23. PRUEBAS OBLIGATORIAS
+────────────────────────────────────────────────────────────────────────────────
+
+No consideres terminada la aplicación porque arranque.
+Realiza pruebas reales con archivos de audio que contengan los instrumentos
+que se pretenden separar.
+
+Pruebas de backend:
+  1. Arranque del servidor sin errores.
+  2. Verificación de modelos (hashes correctos, modelos ausentes).
+  3. Upload de archivo WAV, MP3, FLAC.
+  4. Extracción de metadatos correcta.
+  5. Separación 4-stem (Demucs) con archivo real.
+  6. Sub-stems de batería (BSRNN) con archivo que tenga bombo, caja,
+     toms y platos audibles.
+  7. De-reverb vocal (si hay modelo disponible).
+  8. Lógica de Other (complemento correcto, no silencioso).
+  9. Cancelación durante cada etapa.
+  10. Fallback GPU → CPU.
+  11. Procesamiento de archivo largo (segmentación sin OOM).
+  12. Rutas con espacios, Unicode y caracteres especiales.
+  13. Exportación de mezcla con volúmenes, mute y solo.
+  14. Verificación de que la suma de pistas reconstruye la mezcla
+      (error RMS < umbral).
+  15. Ausencia de archivos silenciosos falsos.
+
+Pruebas de frontend:
+  16. Carga de archivo mediante drag & drop y botón.
+  17. Visualización correcta de metadatos.
+  18. Selector de pistas (Todas, Ninguna, individuales).
+  19. Progreso en tiempo real durante la separación.
+  20. Mezclador: todas las pistas se cargan y reproducen.
+  21. Sincronización sample-accurate (todas las pistas comienzan juntas).
+  22. Mute durante reproducción (no detiene, no reinicia).
+  23. Solo durante reproducción (no detiene, no reinicia).
+  24. Cambio de volumen durante reproducción (sin clics).
+  25. Seek suave (sin clics ni rebotes).
+  26. Atajo de espacio (play/pausa, no en inputs de texto).
+  27. Exportar mezcla y descargar.
+  28. Descargar pistas individuales.
+  29. Descargar todo como ZIP.
+  30. Pistas muteadas por defecto aparecen muteadas.
+  31. Temas claro y oscuro.
+  32. Navegación por teclado.
+  33. Responsive (1024px+).
+
+Pruebas de integración:
+  34. Flujo completo: cargar → seleccionar → separar → escuchar →
+      exportar → descargar.
+  35. Cancelar a mitad de pipeline y volver a empezar.
+  36. Cerrar el servidor durante el procesamiento y reiniciar.
+  37. Procesar múltiples archivos secuencialmente.
+
+No consideres un archivo silencioso como prueba correcta.
+Utiliza grabaciones que contengan realmente cada instrumento.
+
+────────────────────────────────────────────────────────────────────────────────
+24. INFORMES
+────────────────────────────────────────────────────────────────────────────────
+
+Después de cada revisión importante, entrega un informe con:
+  - Funciones implementadas.
+  - Modelos utilizados (nombre, versión, hash, licencia, estado).
+  - Etapas del pipeline funcionales y experimentales.
+  - Pistas que se pueden separar con calidad profesional.
+  - Pistas que se pueden separar con calidad experimental.
+  - Pistas que NO se pueden separar (con explicación).
+  - Dependencias y versiones.
+  - Pruebas realizadas y resultados.
+  - Errores encontrados y corregidos.
+  - Limitaciones pendientes.
+  - Estado de las licencias.
+  - Instrucciones de arranque y uso.
+
+────────────────────────────────────────────────────────────────────────────────
+25. ENTREGA EN CADA ITERACIÓN
+────────────────────────────────────────────────────────────────────────────────
+
+Después de cada petición, proporciona:
+  - Código fuente actualizado (o instrucciones para obtenerlo).
+  - Instrucciones de arranque paso a paso.
+  - Informe de pruebas.
+  - Estado del pipeline de separación.
+  - Lista de modelos descargados y verificados.
+  - Limitaciones conocidas.
+
+No presentes como "funcional" una característica que:
+  - Genere archivos silenciosos.
+  - Utilice un modelo que no existe o no se ha verificado.
+  - No haya superado pruebas reales de audio.
+  - Simule una separación que no puede realizar.
+
+────────────────────────────────────────────────────────────────────────────────
+26. FORMA DE TRABAJO
+────────────────────────────────────────────────────────────────────────────────
+
+Antes de cambiar archivos:
+  - Inspecciona el estado actual del proyecto.
+  - Conserva modificaciones existentes.
+  - Evita operaciones destructivas.
+  - Documenta decisiones técnicas.
+
+Verifica versiones, licencias y requisitos mediante fuentes oficiales
+actuales (repositorios, PyPI, npm, documentación oficial).
+
+Toma decisiones razonables para avanzar, pero no sustituyas una función
+solicitada por otra más simple solamente para conseguir que las pruebas
+pasen.
+
+Si un modelo experimental no funciona bien, es preferible desactivarlo
+y documentar por qué, antes que ofrecerlo con calidad engañosa.
+
+────────────────────────────────────────────────────────────────────────────────
+27. CRITERIO FINAL DE ÉXITO
+────────────────────────────────────────────────────────────────────────────────
+
+Limbus Split Pro - Local Web Edition estará terminado cuando:
+
+  - Sea una aplicación web funcional que se ejecute localmente.
+  - Separe únicamente pistas que realmente pueda generar con calidad
+    verificable.
+  - Las pistas contengan audio real (nunca archivos silenciosos falsos).
+  - Other funcione como complemento matemático correcto.
+  - El mezclador web sea sample-accurate (sincronización exacta).
+  - Mute, solo, volumen y seek funcionen sin detener la reproducción
+    y sin clics audibles.
+  - La mezcla exportada coincida con lo escuchado en el mezclador.
+  - El pipeline en cascada funcione: Demucs → de-reverb → lead/backing
+    (si disponible) → sub-stems de batería → instrumentos (si disponible).
+  - Las pistas experimentales estén claramente marcadas y muteadas por
+    defecto cuando corresponda.
+  - Funcione en CPU y gestione correctamente la GPU si está disponible.
+  - No dependa de servicios externos ni envíe datos fuera del PC.
+  - Incluya atribuciones, manifiesto de modelos y licencias.
+  - Se pueda arrancar con un solo comando tras el setup inicial.
+  - Tenga un diseño limpio, profesional y agradable.
+
+────────────────────────────────────────────────────────────────────────────────
+28. PRIMERA EJECUCIÓN
+────────────────────────────────────────────────────────────────────────────────
+
+Empieza en este orden:
+
+  1. Inspecciona el workspace y el sistema operativo actual.
+  2. Crea un inventario técnico (Python disponible, GPU, RAM, disco).
+  3. Investiga modelos y prepara una tabla de licencias y capacidades:
+       - Demucs htdemucs_ft: estado, hash, licencia.
+       - BSRNN drums sub-stems: estado, hash, licencia.
+       - Modelos de-reverb: investiga opciones, estado, licencia.
+       - Modelos lead/backing vocals: investiga opciones, estado, licencia.
+       - Modelos de separación de instrumentos: investiga opciones.
+  4. Diseña la arquitectura FastAPI + React.
+  5. Diseña el pipeline en cascada con las etapas disponibles.
+  6. Presenta un plan de implementación detallado.
+  7. Construye la estructura del proyecto.
+  8. Implementa el backend (API, motor, pipeline).
+  9. Implementa el frontend (UI, mezclador, Web Audio API).
+  10. Descarga y verifica los modelos.
+  11. Ejecuta pruebas reales de audio.
+  12. Corrige los fallos.
+  13. Documenta todo.
+  14. Entrega artefactos e informe verificable.
+
+Continúa trabajando hasta entregar el mejor resultado posible, sin simular
+capacidades inexistentes ni ocultar limitaciones técnicas o de calidad.
