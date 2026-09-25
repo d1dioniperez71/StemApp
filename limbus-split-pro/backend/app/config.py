@@ -21,6 +21,9 @@ class Settings(BaseSettings):
     manifest_path: Path = PROJECT_ROOT / "MODEL_MANIFEST.json"
     max_upload_mb: int = 200
     demucs_model: str = "htdemucs_ft"
+    # Caché controlada de demucs dentro del proyecto (nunca fuera, sección 20):
+    demucs_cache_dir: Path = PROJECT_ROOT / ".cache" / "demucs"
+    temp_dir: Path = PROJECT_ROOT / "temp"
 
     class Config:
         env_prefix = "LIMBUS_"

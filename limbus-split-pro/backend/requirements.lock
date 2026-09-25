@@ -1,0 +1,42 @@
+# requirements.lock — Limbus Split Pro backend
+# Versiones RESUELTAS Y PROBADAS FUNCIONALMENTE el 2026-09-24 en Python 3.12
+# (separación real con demucs htdemucs_ft sobre CPU torch 2.7.1).
+# El bloque CUDA se instala vía scripts/setup.(sh|ps1) --gpu desde
+# https://download.pytorch.org/whl/cu124 (torch/torchaudio NO van fijados aquí
+# porque la build correcta depende del equipo; ver README "Instalación").
+fastapi==0.116.1
+uvicorn[standard]==0.35.0
+python-multipart==0.0.20
+pydantic==2.11.7
+pydantic-settings>=2.3
+sse-starlette==2.4.1
+
+# Runtime de inferencia (build por defecto: CPU; usar setup --gpu para CUDA)
+torch==2.7.1
+torchaudio==2.7.1
+demucs==4.1.0
+# Dependencias transitivas de demucs fijadas (resueltas en la prueba funcional):
+dora_search==0.1.13
+einops==0.8.2
+huggingface-hub==0.33.4
+julian==0.14
+julius==0.2.8
+lameenc==1.8.4
+randomname==0.2.1
+resampy==0.4.3
+safetensors==0.5.3
+sphn==0.2.1
+submitit==1.5.4
+
+# Audio / numérico
+numpy==2.3.1
+scipy==1.16.0
+soundfile==0.14.0
+librosa==1.0.0
+pydub==0.25.1
+PyYAML==6.0.2
+tqdm==4.67.1
+
+# Testing
+pytest>=8,<9
+httpx>=0.27

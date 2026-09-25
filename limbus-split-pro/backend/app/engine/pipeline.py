@@ -83,18 +83,10 @@ async def run_job(job: SeparationJob):
 async def _run_demucs(job: SeparationJob, out_dir: Path):
     """Ejecuta demucs en un hilo aparte (inferencia CPU/GPU bloqueante)."""
     def _sync():
-        from demucs.separate import main as demucs_main
-        demucs_main([
-            "-n", settings.demucs_model,
-            "-o", str(out_dir / "demucs"),
-            "--two-stems", "vocals",
-            str(job.source_path),
-        ])
-        base = out_dir / "demucs" / settings.demucs_model / job.source_path.stem
-        for stem in ("vocals", "no_vocals", "drums", "bass", "other"):
-            p = base / f"{stem}.wav"
-            if p.exists():
-                job.stems[stem] = str(p.relative_to(settings.output_dir))
+        from app.engine.demucs_engine import separate as demucs_separate
+        stems = demucs_separate(job.source_path, out_dir / "demucs")
+        for stem, p in stems.items():
+            job.stems[stem] = str(p.relative_to(settings.output_dir))
 
     loop = asyncio.get_event_loop()
     job.emit(type="progress", value=0.05)
@@ -102,12 +94,24 @@ async def _run_demucs(job: SeparationJob, out_dir: Path):
 
 
 async def _run_bsrnn(job: SeparationJob, out_dir: Path):
-    """Refinamiento vocal con BSRNN. Placeholder hasta validar pesos/licencia.
+    """Refinamiento vocal con BSRNN (etapa 5, opt-in).
 
-    Se implementará contra ByteDance/music_source_separation cuando los
-    checkpoints estén descargados y verificados por hash en models/.
+    Delega en app.engine.bsrnn_engine, que exige pesos instalados y verificados
+    por SHA-256 + licencia resuelta; si falta algo, lanza error accionable
+    (nunca simula resultados).
     """
-    raise NotImplementedError("BSRNN engine pendiente de pesos verificados.")
+    from app.engine.bsrnn_engine import refine_vocals, weights_ready
+    ok, why = weights_ready()
+    if not ok:
+        raise RuntimeError(f"Etapa 5 (BSRNN) no disponible: {why}")
+    vocals = job.stems.get("vocals")
+    if not vocals:
+        raise RuntimeError("Etapa 5 requiere el stem 'vocals' de la etapa 1.")
+    out = await asyncio.get_event_loop().run_in_executor(
+        None, refine_vocals, settings.output_dir / vocals, out_dir / "bsrnn")
+    if out is None:
+        raise RuntimeError("BSRNN devolvió un resultado vacío; revisar pesos/log.")
+    job.stems["vocals_bsrnn"] = str(out.relative_to(settings.output_dir))
 
 
 def create_job(source_path: Path, stages: Optional[list[int]] = None) -> SeparationJob:

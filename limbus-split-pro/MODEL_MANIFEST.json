@@ -1,45 +1,88 @@
 {
-  "$schema_note": "Manifesto explícito de modelos. Los hashes SHA-256 deben verificarse tras la descarga real en el equipo objetivo (GPU/CPU). Ningún modelo se descarga sin consentimiento del usuario.",
+  "$schema_note": "Manifesto explícito de modelos. Los hashes SHA-256 con valor hex fueron calculados por descarga completa desde la fuente primaria el 2026-09-24 (ver docs/MODEL_SOURCES.md). Los marcados PENDIENTE_VERIFICACION_LOCAL se resuelven ejecutando scripts/setup.sh --with-models (o setup.ps1), que descarga y escribe el hash real. Ningún modelo se descarga sin consentimiento explícito.",
   "models": [
     {
       "id": "htdemucs_ft",
       "stage": 1,
       "role": "Separación base 4 stems (vocals, drums, bass, other)",
       "source": "Meta FAIR / Demucs (facebookresearch/demucs)",
-      "license": "CC BY-NC 4.0",
-      "sha256": "PENDIENTE_VERIFICACION_LOCAL",
+      "license": "CC BY-NC 4.0 (pesos); MIT (código)",
       "status": "VERIFIED_UPSTREAM",
-      "notes": "Modelo oficial htdemucs_ft (fine-tuned). Descarga vía demucs al primer uso con confirmación explícita."
+      "weights": [
+        {
+          "file": "f7e0c4bc-ba3fe64a.th",
+          "url": "https://dl.fbaipublicfiles.com/demucs/hybrid_transformer/f7e0c4bc-ba3fe64a.th",
+          "sha256": "ba3fe64ae8ef66ac9a4857222ce48efbdc5eb3ad375cb79dd13debee5aaa4066",
+          "sha256_verified_on": "2026-09-24",
+          "size_bytes": 84141271
+        },
+        {
+          "file": "d12395a8-e57c48e6.th",
+          "url": "https://dl.fbaipublicfiles.com/demucs/hybrid_transformer/d12395a8-e57c48e6.th",
+          "sha256": "e57c48e6b0e38af4f7118d7bd08c49f0a0c0edf7d09143bdd902ea0d237303e6",
+          "sha256_verified_on": "2026-09-24",
+          "size_bytes": 84141271
+        },
+        {
+          "file": "92cfc3b6-ef3bcb9c.th",
+          "url": "https://dl.fbaipublicfiles.com/demucs/hybrid_transformer/92cfc3b6-ef3bcb9c.th",
+          "sha256": "ef3bcb9c8b40d14ae5d51b6db2587339cc12c6b77c0be151ce6d69002e087bf2",
+          "sha256_verified_on": "2026-09-24",
+          "size_bytes": 84141271
+        },
+        {
+          "file": "04573f0d-f3cf25b2.th",
+          "url": "https://dl.fbaipublicfiles.com/demucs/hybrid_transformer/04573f0d-f3cf25b2.th",
+          "sha256": "f3cf25b222c4eed7cd49dd8b2c9597d50c18bd154090f7b919cfa5f93cf22c49",
+          "sha256_verified_on": "2026-09-24",
+          "size_bytes": 84141271
+        }
+      ],
+      "notes": "Bag oficial definido en demucs/remote/htdemucs_ft.yaml (modelos f7e0c4bc, d12395a8, 92cfc3b6, 04573f0d). El runtime de demucs verifica internamente al cargar."
     },
     {
-      "id": "bsrnn_vocals",
-      "stage": 5,
-      "role": "Refinamiento vocal / separación multi-fuente alta fidelidad",
-      "source": "ByteDance/music_source_separation (Raveseed BSRNN)",
-      "license": "Apache-2.0 (verificar por checkpoint)",
-      "sha256": "PENDIENTE_VERIFICACION_LOCAL",
-      "status": "EXPERIMENTAL",
-      "notes": "Requiere verificación de licencia de checkpoints específicos antes de incluirse en el pipeline por defecto."
-    },
-    {
-      "id": "dereverb_candidate",
+      "id": "dereverb_mel_band_roformer",
       "stage": 2,
-      "role": "De-reverb de voz",
-      "source": "A investigar: UVR DeReverb / modelos académicos (DRNR, etc.)",
-      "license": "PENDIENTE",
-      "sha256": null,
-      "status": "NOT_FOUND_VERIFIED",
-      "notes": "HONESTIDAD: no existe aún un modelo público verificado con calidad profesional para de-reverb musical. Etapa marcada como experimental hasta validación."
+      "role": "De-reverb de voz (experimental, calidad dependiente del material)",
+      "source": "https://huggingface.co/anvuew/dereverb_mel_band_roformer + https://github.com/ZFTurbo/Music-Source-Separation-Training",
+      "license": "GPL-3.0 (declarada en la tarjeta HF; verificar antes de cualquier distribución)",
+      "status": "EXPERIMENTAL",
+      "weights": [
+        {
+          "file": "dereverb_mel_band_roformer_anvuew_sdr_19.1729.ckpt",
+          "url": "https://huggingface.co/anvuew/dereverb_mel_band_roformer/resolve/main/dereverb_mel_band_roformer_anvuew_sdr_19.1729.ckpt",
+          "sha256": "PENDIENTE_VERIFICACION_LOCAL",
+          "config_url": "https://huggingface.co/anvuew/dereverb_mel_band_roformer/resolve/main/dereverb_mel_band_roformer_anvuew.yaml"
+        }
+      ],
+      "notes": "Actualización 2026-09-24: existe un modelo público específico (SDR 19.17 reportada), a diferencia del estado NOT_FOUND_VERIFIED anterior. Limitaciones documentadas por el autor: entrenado con dry vocals mono; riesgo en coros/pistas estéreo. Etapa opt-in, nunca por defecto."
     },
     {
       "id": "lead_backing_split",
       "stage": 3,
       "role": "Separación lead vs backing vocals",
-      "source": "A investigar: UVR models / académicos",
-      "license": "PENDIENTE",
+      "source": "Investigado 2026-09-24: HuggingFace API (0 resultados), UVR (no publica este modelo), literatura (sin checkpoints reproducibles)",
+      "license": null,
       "sha256": null,
       "status": "NOT_FOUND_VERIFIED",
-      "notes": "HONESTIDAD: sin modelos públicos fiables de calidad profesional. UI debe informar limitaciones."
+      "notes": "HONESTIDAD: confirmado tras búsqueda en fuentes primarias. Sin modelos públicos fiables de calidad profesional. UI debe informar la limitación. Ver docs/MODEL_SOURCES.md (Etapa 3)."
+    },
+    {
+      "id": "bsrnn_vocals",
+      "stage": 5,
+      "role": "Refinamiento vocal BSRNN sobre música (MUSDB18-HQ)",
+      "source": "https://huggingface.co/crlandsc/bsrnn-vocals (arquitectura BSRNN; código derivado de bytedance/music_source_separation)",
+      "license": "Código Apache-2.0; LICENCIA DE PESOS NO DECLARADA — no integrar por defecto",
+      "status": "EXPERIMENTAL_LICENSE_UNRESOLVED",
+      "weights": [
+        {
+          "file": "vocals.ckpt",
+          "url": "https://huggingface.co/crlandsc/bsrnn-vocals/resolve/main/vocals.ckpt",
+          "sha256": "PENDIENTE_VERIFICACION_LOCAL",
+          "size_bytes_approx": 519814907
+        }
+      ],
+      "notes": "Distinción clave investigada: ByteDance/Raveseed BSRNN (bytedance/BRSLM) es para HABLA a 16 kHz, no apto para música; crlandsc es la variante musical. Opt-in explícito hasta resolver licencia de pesos."
     }
   ]
 }
